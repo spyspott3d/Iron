@@ -35,10 +35,15 @@ At login, type `/ir about` in chat to confirm the addon is loaded and see the lo
 ## Commands
 
 `/ir help` lists all available commands.
+
 `/ir config` opens the settings panel.
+
 `/ir about` shows version, locale, and a quick command summary.
+
 `/ir logs` opens a copyable debug log window (useful for bug reports).
+
 `/ir debug on|off` toggles verbose chat output.
+
 `/ir stats` shows load count and first install date.
 
 ## Compatibility
