@@ -1,6 +1,6 @@
 # Iron
 
-A plug and play addon suite for **Project Ascension** (3.3.5a) covering mail, bank, and Auction House workflows.
+A plug and play addon suite for WoW WotLK 3.3.5a covering mail, bank, and Auction House workflows. Built and tested on Project Ascension.
 
 Iron is not trying to replace TSM or compete with it. TSM is more powerful and will stay that way. Iron is for players who want most of the day-to-day value (bulk mail, bank restocking, AH selling, mat buying) without spending an evening configuring groups, operations, and custom price strings before anything works.
 
