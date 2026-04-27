@@ -12,7 +12,7 @@ Four independent modules sharing a single addon. None require setup before first
 
 **IronSell** lists everything in your bags that isn't blacklisted and computes a sale price from recent AH scans (5% undercut by default). Click the Quick Sell button to post in one shot at the suggested price, or click the item row to open a validation panel where you can tweak stack size, number of stacks, sale price, and duration before confirming. The blacklist approach means it works on day one with zero configuration. Items you don't want sold get added to the blacklist as you go.
 
-![IronSell_Tab1](./screenshots/Sell_Tab1.png)
+![Sell Tab 1](screenshots/Sell_Tab1.png)
 
 **IronBuy** shows your known recipes by profession, displays each reagent's market price and the total reagent cost for the chosen quantity, and lets you click a reagent to see live AH listings sorted cheapest first. Pick a quantity, the addon auto-selects the cheapest auctions to match it, and buys them in batch. Open each profession window once so Iron can sync your recipes; it re-syncs the next time you open the window.
 
