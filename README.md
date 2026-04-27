@@ -28,7 +28,9 @@ Multilingual: English, French, German, Spanish, Simplified Chinese. Falls back t
 
 ## Installation
 
-Download the latest release zip from the Releases page. Extract it into your `World of Warcraft/Interface/AddOns/` folder so the path looks like `Interface/AddOns/Iron/Iron.toc`. Launch the client.
+Download the latest release zip from the Releases page. 
+Extract it into your `World of Warcraft/Interface/AddOns/` folder so the path looks like `Interface/AddOns/Iron/Iron.toc`. 
+Launch the client.
 
 At login, type `/ir about` in chat to confirm the addon is loaded and see the locale status.
 
