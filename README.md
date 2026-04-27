@@ -1,6 +1,6 @@
 # Iron
 
-A plug and play addon suite for WoW WotLK 3.3.5a covering mail, bank, and Auction House workflows. Built and tested on Project Ascension.
+A plug and play addon suite for **WoW WotLK 3.3.5a** covering mail, bank, and Auction House workflows. Built and tested on Project Ascension.
 
 Iron is not trying to replace TSM or compete with it. TSM is more powerful and will stay that way. Iron is for players who want most of the day-to-day value (bulk mail, bank restocking, AH selling, mat buying) without spending an evening configuring groups, operations, and custom price strings before anything works.
 
@@ -10,9 +10,9 @@ Open the addon, click a button, it works. That is the whole pitch.
 
 Four independent modules sharing a single addon. None require setup before first use.
 
-**IronSell** lists everything in your bags that isn't blacklisted, computes a sale price from recent AH scans (5% undercut by default), and posts in one click per item. The blacklist approach means it works on day one with zero configuration. Items you don't want sold get added to the blacklist as you go.
+**IronSell** lists everything in your bags that isn't blacklisted and computes a sale price from recent AH scans (5% undercut by default). Click the Quick Sell button to post in one shot at the suggested price, or click the item row to open a validation panel where you can tweak stack size, number of stacks, sale price, and duration before confirming. The blacklist approach means it works on day one with zero configuration. Items you don't want sold get added to the blacklist as you go.
 
-**IronBuy** shows your known recipes by profession, displays each reagent's market price and the total reagent cost for the chosen quantity, and lets you click a reagent to see live AH listings sorted cheapest first. Pick a quantity, the addon auto-selects the cheapest auctions to match it, and buys them in batch.
+**IronBuy** shows your known recipes by profession, displays each reagent's market price and the total reagent cost for the chosen quantity, and lets you click a reagent to see live AH listings sorted cheapest first. Pick a quantity, the addon auto-selects the cheapest auctions to match it, and buys them in batch. Open each profession window once so Iron can sync your recipes; it re-syncs the next time you open the window.
 
 **IronVault** moves items between your bags and bank based on targets you define once. Open a group, drop items into it with target counts ("I want 40 flasks in the bank", or "I want 200 mana potions in my bags"), and from then on a single click at the bank moves what's missing. Each group runs in one direction, deposit (bag to bank) or withdraw (bank to bag), with auto-sync on bank open if you want it.
 
