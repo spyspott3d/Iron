@@ -16,8 +16,8 @@ end
 
 function IR:AttachTooltip(widget, text, anchor)
     if not widget or not text then return end
-    widget:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, anchor or "ANCHOR_RIGHT")
+    widget:SetScript("OnEnter", function(frame)
+        GameTooltip:SetOwner(frame, anchor or "ANCHOR_RIGHT")
         GameTooltip:SetText(text, 1, 1, 1, 1, true)
         GameTooltip:Show()
     end)
@@ -103,7 +103,7 @@ function IR:OpenLogs()
         edit:SetFontObject("ChatFontNormal")
         edit:SetWidth(620)
         edit:SetMaxLetters(0)
-        edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+        edit:SetScript("OnEscapePressed", function(eb) eb:ClearFocus() end)
         sf:SetScrollChild(edit)
         f.editBox = edit
 

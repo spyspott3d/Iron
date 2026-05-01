@@ -535,7 +535,6 @@ IR:On("AUCTION_HOUSE_CLOSED", function()
     if postState then finishPosting(false, "ah_closed") end
 end)
 
-local selectedBlackItem
 local blacklistContent, blacklistRows = nil, {}
 local addBlackEdit
 local refreshBlacklist

@@ -498,7 +498,6 @@ function IronVault:RestockAll(onComplete)
     for _, id in ipairs(deposits) do table.insert(queue, id) end
     for _, id in ipairs(withdraws) do table.insert(queue, id) end
 
-    local totalGroups = #queue
     local totalTransfers = 0
     local touchedGroups = 0
 
@@ -966,7 +965,7 @@ local function buildVaultAITab(parent)
         itemContent:SetHeight(math.max(#ids * 24, 1))
         for i, itemID in ipairs(ids) do
             local row = getItemRow(i)
-            local name, link, _, _, _, _, _, _, _, texture = GetItemInfo(itemID)
+            local name, _, _, _, _, _, _, _, _, texture = GetItemInfo(itemID)
             if texture then
                 row.icon:SetTexture(texture)
             else

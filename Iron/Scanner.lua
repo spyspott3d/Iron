@@ -222,9 +222,9 @@ processTargetedPage = function()
     end
 
     for i = 1, batch do
-        local name, texture, count, quality, canUse, level,
-              minBid, minIncrement, buyoutPrice, bidAmount,
-              highBidder, owner, sold = GetAuctionItemInfo("list", i)
+        local _, _, count, _, _, _,
+              minBid, _, buyoutPrice, _,
+              _, owner = GetAuctionItemInfo("list", i)
         local itemID
         local link = GetAuctionItemLink("list", i)
         if link then itemID = tonumber(link:match("item:(%d+)")) end
@@ -353,9 +353,9 @@ processPage = function()
     state.totalAuctions = totalAuctions or 0
 
     for i = 1, (batchAuctions or 0) do
-        local name, texture, count, quality, canUse, level, levelColHeader,
-              minBid, minIncrement, buyoutPrice, bidAmount, hasAllInfo, owner, sold,
-              ownerFullName, itemID = GetAuctionItemInfo("list", i)
+        local _, _, count, _, _, _, _,
+              _, _, buyoutPrice, _, _, _, _,
+              _, itemID = GetAuctionItemInfo("list", i)
         if not itemID then
             local link = GetAuctionItemLink("list", i)
             if link then itemID = tonumber(link:match("item:(%d+)")) end

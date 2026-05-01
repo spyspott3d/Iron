@@ -511,9 +511,9 @@ local function createFrame()
         if not sendTab then return end
         for i = 1, ATTACH_MAX_SEND do
             local b = sendAttachSlots[i]
-            local name, tex, count, quality
+            local name, tex, count
             if GetSendMailItem then
-                name, tex, count, quality = GetSendMailItem(i)
+                name, tex, count = GetSendMailItem(i)
             end
             if name and tex then
                 b.icon:SetTexture(tex)
@@ -688,11 +688,11 @@ local function buildCODPopup()
     payBtn:SetText(IR.L["Pay & take"])
     codPopup.payBtn = payBtn
 
-    local returnBtn = CreateFrame("Button", nil, codPopup, "UIPanelButtonTemplate")
-    returnBtn:SetSize(120, 22)
-    returnBtn:SetPoint("BOTTOM", 0, 16)
-    returnBtn:SetText(IR.L["Return"])
-    codPopup.returnBtn = returnBtn
+    local popupReturnBtn = CreateFrame("Button", nil, codPopup, "UIPanelButtonTemplate")
+    popupReturnBtn:SetSize(120, 22)
+    popupReturnBtn:SetPoint("BOTTOM", 0, 16)
+    popupReturnBtn:SetText(IR.L["Return"])
+    codPopup.returnBtn = popupReturnBtn
 
     local cancelBtn = CreateFrame("Button", nil, codPopup, "UIPanelButtonTemplate")
     cancelBtn:SetSize(120, 22)

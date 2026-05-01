@@ -9,17 +9,20 @@ std = "lua51"
 -- Allow long lines: WoW localization tables and tooltip strings can be wide.
 max_line_length = false
 
--- Cap function complexity. Tune up if needed.
-max_cyclomatic_complexity = 30
+-- Cap function complexity. Scanners and enumerators legitimately branch a lot.
+max_cyclomatic_complexity = 40
 
--- Globals defined by Iron itself. Anything in the addon that lives at the
--- global scope or in the addon namespace gets listed here.
+-- Mutable globals: addon namespace, the SavedVariable, slash bindings, and
+-- WoW tables/hooks the addon writes into.
 globals = {
     "Iron",
-    "IronDB",
-    "IronDB_Char",
+    "Iron_DB",
     "SLASH_IRON1",
     "SLASH_IRON2",
+    "SlashCmdList",
+    "StaticPopupDialogs",
+    "ChatEdit_InsertLink",
+    "AuctionFrameAuctions",
 }
 
 -- Read-only globals from WoW client and Lua stdlib that the addon reads
@@ -36,13 +39,17 @@ read_globals = {
 
     -- Frame and UI API
     "CreateFrame", "UIParent", "WorldFrame", "GameTooltip", "DEFAULT_CHAT_FRAME",
-    "ChatFrame1", "StaticPopupDialogs", "StaticPopup_Show", "StaticPopup_Hide",
+    "ChatFrame1", "StaticPopup_Show", "StaticPopup_Hide",
     "PlaySound", "PlaySoundFile", "GetCursorPosition", "GetScreenWidth",
     "GetScreenHeight", "InCombatLockdown", "IsAddOnLoaded", "LoadAddOn",
     "GetAddOnMetadata", "EnableAddOn", "DisableAddOn",
+    "UISpecialFrames",
 
     -- Slash commands
-    "SlashCmdList", "ChatEdit_FocusActiveWindow", "ChatFrame_OpenChat",
+    "ChatEdit_FocusActiveWindow", "ChatFrame_OpenChat",
+
+    -- Cursor and linking
+    "ClearCursor", "CursorHasItem", "GetCursorInfo",
 
     -- Items, bags, links
     "GetItemInfo", "GetItemQualityColor", "GetItemIcon", "GetContainerItemInfo",
@@ -52,12 +59,17 @@ read_globals = {
     "GetInventoryItemLink", "GetInventoryItemID", "GetInventoryItemCount",
 
     -- Mail
+    "MailFrame", "MailFrameTab1", "MailFrameTab2", "MailFrameTab_OnClick",
+    "MiniMapMailFrame", "HasNewMail", "CloseMail",
     "CheckInbox", "GetInboxNumItems", "GetInboxText", "GetInboxItem",
     "GetInboxItemLink", "GetInboxHeaderInfo", "GetInboxInvoiceInfo",
     "TakeInboxMoney", "TakeInboxItem", "TakeInboxTextItem", "DeleteInboxItem",
-    "InboxItemCanDelete", "ReturnInboxItem", "GetInboxNumItems",
-    "GetSendMailItem", "GetSendMailItemLink", "AddSendMailCOD", "GetSendMailMoney",
+    "InboxItemCanDelete", "ReturnInboxItem",
+    "GetSendMailItem", "GetSendMailItemLink",
+    "AddSendMailCOD", "SetSendMailCOD", "SetSendMailMoney", "GetSendMailMoney",
     "ClearSendMail", "SendMail", "ClickSendMailItemButton",
+    "MoneyInputFrame_GetCopper", "MoneyInputFrame_SetCopper",
+    "MoneyInputFrame_ResetMoney",
 
     -- Auction House
     "QueryAuctionItems", "GetAuctionItemInfo", "GetAuctionItemLink",
@@ -67,6 +79,7 @@ read_globals = {
     "GetAuctionItemSubClasses", "GetAuctionItemClasses", "CalculateAuctionDeposit",
     "CanSendAuctionQuery", "AuctionFrame", "BrowseScrollFrame", "BidScrollFrame",
     "AuctionsScrollFrame", "GetCVarBool",
+    "StartPrice", "BuyoutPrice",
 
     -- Bank
     "BankFrame", "GetNumBankSlots", "PurchaseSlot", "BankButtonIDToInvSlotID",
@@ -74,8 +87,12 @@ read_globals = {
     -- Trade skills and professions
     "GetNumTradeSkills", "GetTradeSkillInfo", "GetTradeSkillItemLink",
     "GetTradeSkillReagentInfo", "GetTradeSkillNumReagents",
+    "GetTradeSkillLine", "GetTradeSkillReagentItemLink", "GetTradeSkillIcon",
     "ExpandTradeSkillSubClass", "CollapseTradeSkillSubClass",
     "GetSpellInfo", "GetSpellLink", "GetSpellBookItemInfo",
+
+    -- Player and units
+    "UnitName",
 
     -- Money
     "GetMoney", "GetCoinTextureString", "MoneyFrame_Update",
@@ -83,30 +100,35 @@ read_globals = {
     -- Localization
     "GetLocale",
 
-    -- Events / scripts
+    -- Events and scripts
     "geterrorhandler", "seterrorhandler",
 
     -- C constants
     "BOOKTYPE_SPELL", "NUM_BAG_SLOTS", "NUM_BANKBAGSLOTS", "BACKPACK_CONTAINER",
     "BANK_CONTAINER", "KEYRING_CONTAINER",
+    "ATTACHMENTS_MAX_RECEIVE", "ATTACHMENTS_MAX_SEND",
+    "ITEM_SOULBOUND", "ITEM_BIND_ON_PICKUP", "ITEM_BIND_QUEST",
+    "ACCEPT", "CANCEL",
 
     -- Ace3 (loaded as an embedded lib if used)
     "LibStub",
 }
 
--- Per-file overrides if needed later.
+-- Per-file overrides.
 files = {
-    ["Iron/Locale/"] = {
+    ["Iron/Locales.lua"] = {
         -- Locale tables can have unused keys (placeholder strings).
         ignore = { "211", "212", "213" },
     },
 }
 
 -- Globally ignored warnings.
--- 631: line too long (already disabled via max_line_length)
+-- 211/addonName: standard `local addonName, MAI = ...` header pattern
 -- 212: unused argument (event handlers often take args they ignore)
 -- 213: unused loop variable
+-- 631: line too long (already disabled via max_line_length)
 ignore = {
+    "211/addonName",
     "212",
     "213",
     "631",
