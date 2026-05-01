@@ -15,16 +15,6 @@ local frame, listScroll, listContent, statusFs, titleFs
 local rows = {}
 local currentItemID
 
-local QUALITY_COLORS = {
-    [0] = "|cff9d9d9d",
-    [1] = "|cffffffff",
-    [2] = "|cff1eff00",
-    [3] = "|cff0070dd",
-    [4] = "|cffa335ee",
-    [5] = "|cffff8000",
-    [6] = "|cffe6cc80",
-}
-
 local function ensureFrame()
     if frame then return end
 
