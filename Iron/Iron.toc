@@ -2,7 +2,7 @@
 ## Title: Iron
 ## Notes: Mail, bank, and AH automation for WotLK 3.3.5a (tested on Ascension)
 ## Author: SpySpoTt3d
-## Version: 1.0.0
+## Version: 1.0.1
 ## SavedVariables: Iron_DB
 
 Core.lua
