@@ -179,7 +179,8 @@ local function collectDescendantMatches()
         matchProfession(state.profession)
     else
         for _, prof in ipairs(Recipes:GetAllProfessions()) do
-            if prof:lower():find(f, 1, true) then
+            local localized = Recipes:GetLocalizedName(prof) or prof
+            if prof:lower():find(f, 1, true) or localized:lower():find(f, 1, true) then
                 table.insert(results, { type = "profession", name = prof })
             end
             matchProfession(prof)
@@ -295,7 +296,7 @@ local function renderProfessions()
         local nCrafts = 0
         for _ in pairs(entry and entry.crafts or {}) do nCrafts = nCrafts + 1 end
         r.icon:SetTexture(PROF_ICONS[prof] or DEFAULT_PROF_ICON)
-        r.primary:SetText("|cffffd200" .. prof .. "|r")
+        r.primary:SetText("|cffffd200" .. Recipes:GetLocalizedName(prof) .. "|r")
         local key = (nCrafts == 1) and "%d recipe" or "%d recipes"
         r.secondary:SetText(string.format(IR.L[key], nCrafts))
         r.rightTop:SetText("")
@@ -306,7 +307,7 @@ local function renderProfessions()
 end
 
 local function renderCategories(prof)
-    titleFs:SetText(prof)
+    titleFs:SetText(Recipes:GetLocalizedName(prof))
     local entry = Recipes:Get(prof)
     if not entry or not entry.crafts then
         listContent:SetHeight(1)
@@ -508,7 +509,7 @@ local function renderBreadcrumb()
     local segments = { { text = IR.L["Professions"], action = setLevel1, key = "root" } }
     if state.profession then
         local prof = state.profession
-        table.insert(segments, { text = prof, action = function() setLevel2(prof) end, key = "profession" })
+        table.insert(segments, { text = Recipes:GetLocalizedName(prof), action = function() setLevel2(prof) end, key = "profession" })
     end
     if state.category then
         local prof, cat = state.profession, state.category
@@ -574,7 +575,7 @@ local function renderSearchResults()
 
         if r.type == "profession" then
             row.icon:SetTexture(PROF_ICONS[r.name] or DEFAULT_PROF_ICON)
-            row.primary:SetText("|cffffd200" .. r.name .. "|r")
+            row.primary:SetText("|cffffd200" .. Recipes:GetLocalizedName(r.name) .. "|r")
             row.secondary:SetText(IR.L["Profession"])
             local prof = r.name
             row:SetScript("OnClick", function() setLevel2(prof) end)
@@ -582,7 +583,7 @@ local function renderSearchResults()
         elseif r.type == "category" then
             row.icon:SetTexture(DEFAULT_CATEGORY_ICON)
             row.primary:SetText(r.name)
-            row.secondary:SetText(r.profession)
+            row.secondary:SetText(Recipes:GetLocalizedName(r.profession))
             local prof, cat = r.profession, r.category
             row:SetScript("OnClick", function() setLevel3(prof, cat) end)
 
@@ -594,7 +595,7 @@ local function renderSearchResults()
             row.icon:SetTexture(icon or "Interface\\Icons\\INV_Misc_QuestionMark")
             local color = SKILL_COLORS[r.craft.skillType] or "|cffffffff"
             row.primary:SetText(color .. (r.name or "?") .. "|r")
-            row.secondary:SetText(r.profession .. "  >  " .. r.category)
+            row.secondary:SetText(Recipes:GetLocalizedName(r.profession) .. "  >  " .. r.category)
             local prof, cat, key = r.profession, r.category, r.key
             row:SetScript("OnClick", function() setLevel4(prof, cat, key) end)
 

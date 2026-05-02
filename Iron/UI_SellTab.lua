@@ -168,6 +168,117 @@ local validationPanel
 local valItem
 local scanBtn, refreshBtn
 
+-- ============================================================================
+-- Silent deposit preview
+-- ----------------------------------------------------------------------------
+-- CalculateAuctionDeposit() reads the auction sell slot. To avoid relying on
+-- vendor price (often 0 for Ascension custom items) and the standard 5%
+-- formula (Ascension uses non-standard fees), we transiently place a stack in
+-- the sell slot, read the server-computed deposit, and put the item back. No
+-- AH tab switch is required: the slot exists in memory regardless of which
+-- tab is visible.
+-- ============================================================================
+
+local DURATION_INDEX = { [12] = 1, [24] = 2, [48] = 3 }
+local BAG_IDS_PREVIEW = { 0, 1, 2, 3, 4 }
+local PREVIEW_DEBOUNCE = 0.25
+
+local depositCache = {}        -- "itemID:runTime" -> perUnitDeposit
+local previewBlocked = {}      -- "itemID:runTime" -> until time(); skip re-attempts briefly
+
+local function depositKey(itemID, runTime)
+    return tostring(itemID) .. ":" .. tostring(runTime)
+end
+
+local previewFrame = CreateFrame("Frame")
+previewFrame:Hide()
+local previewElapsed = 0
+local previewPending = nil
+
+local function findUnlockedItemSlot(itemID)
+    for _, bag in ipairs(BAG_IDS_PREVIEW) do
+        local n = GetContainerNumSlots(bag) or 0
+        for slot = 1, n do
+            local link = GetContainerItemLink(bag, slot)
+            if link and tonumber(link:match("item:(%d+)")) == itemID then
+                local _, count, locked = GetContainerItemInfo(bag, slot)
+                if count and count > 0 and not locked then
+                    return bag, slot, count
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function silentDepositMeasure(itemID, runTime)
+    if not (AuctionFrame and AuctionFrame:IsShown()) then return nil, "ah_closed" end
+    if not CalculateAuctionDeposit then return nil, "no_api" end
+    local cursorType = GetCursorInfo and GetCursorInfo() or nil
+    if cursorType then return nil, "cursor_busy" end
+    local slotName = GetAuctionSellItemInfo and GetAuctionSellItemInfo() or nil
+    if slotName then return nil, "slot_busy" end
+
+    local bag, slot = findUnlockedItemSlot(itemID)
+    if not bag then return nil, "no_slot" end
+
+    PickupContainerItem(bag, slot)
+    local cType, cID = GetCursorInfo()
+    if cType ~= "item" or cID ~= itemID then
+        ClearCursor()
+        return nil, "pickup_failed"
+    end
+
+    ClickAuctionSellItemButton()
+    local placedName, _, placedCount = GetAuctionSellItemInfo()
+    if not placedName or not placedCount or placedCount <= 0 then
+        ClearCursor()
+        return nil, "place_failed"
+    end
+
+    local total = CalculateAuctionDeposit(runTime) or 0
+
+    -- Return item to original bag slot
+    ClickAuctionSellItemButton()
+    ClearCursor()
+
+    if placedCount <= 0 then return nil, "zero_count" end
+    -- Floor to copper. Per-unit may round down; multiplied back when displayed.
+    return math.floor(total / placedCount)
+end
+
+local function requestDepositPreview(itemID, runTime)
+    if not itemID or not runTime then return end
+    if depositCache[depositKey(itemID, runTime)] then return end
+    local blockUntil = previewBlocked[depositKey(itemID, runTime)]
+    if blockUntil and time() < blockUntil then return end
+    previewPending = { itemID = itemID, runTime = runTime }
+    previewElapsed = 0
+    previewFrame:Show()
+end
+
+previewFrame:SetScript("OnUpdate", function(self, dt)
+    previewElapsed = previewElapsed + dt
+    if previewElapsed < PREVIEW_DEBOUNCE then return end
+    self:Hide()
+    previewElapsed = 0
+    local s = previewPending
+    previewPending = nil
+    if not s then return end
+    if not (validationPanel and validationPanel:IsShown()) then return end
+    if not valItem or valItem.itemID ~= s.itemID then return end
+
+    local perUnit, reason = silentDepositMeasure(s.itemID, s.runTime)
+    if perUnit then
+        depositCache[depositKey(s.itemID, s.runTime)] = perUnit
+        if validationPanel.updateTotal then validationPanel.updateTotal() end
+    else
+        -- Back off briefly so we don't thrash on persistent transient failures
+        previewBlocked[depositKey(s.itemID, s.runTime)] = time() + 5
+        IR:Debug("deposit preview skipped: " .. tostring(reason))
+    end
+end)
+
 local function settingsSellAI()
     return Iron_DB and Iron_DB.settings and Iron_DB.settings.ironSell
 end
@@ -342,6 +453,9 @@ local function buildValidationPanel(parent)
                 other:SetChecked(other == self)
             end
             p.duration = self.value
+            if valItem then
+                requestDepositPreview(valItem.itemID, DURATION_INDEX[self.value] or 1)
+            end
             if p.updateTotal then p.updateTotal() end
         end)
         p.durationRadios[h] = rb
@@ -383,8 +497,16 @@ local function buildValidationPanel(parent)
         local total = stack * num * sale
         totalFs:SetText(IR:CopperToString(total))
 
-        local vendor = (valItem and valItem.vendorPrice) or 0
-        local deposit = calcDeposit(vendor, stack, num, p.duration or 12)
+        local durationHours = p.duration or 12
+        local runTime = DURATION_INDEX[durationHours] or 1
+        local perUnit = valItem and depositCache[depositKey(valItem.itemID, runTime)]
+        local deposit
+        if perUnit then
+            deposit = perUnit * stack * num
+        else
+            local vendor = (valItem and valItem.vendorPrice) or 0
+            deposit = calcDeposit(vendor, stack, num, durationHours)
+        end
         local netGain = total - deposit
         depositFs:SetText(string.format(IR.L["Deposit: %s | Net if sold: %s"],
             IR:CopperToString(deposit), IR:CopperToString(netGain)))
@@ -713,6 +835,7 @@ function IR.UI.SellTab:OpenValidation(info)
         rb:SetChecked(h == defaultDur)
     end
 
+    requestDepositPreview(info.itemID, DURATION_INDEX[defaultDur] or 1)
     validationPanel.updateTotal()
 
     if listScroll then listScroll:Hide() end
@@ -745,6 +868,9 @@ end
 
 function IR.UI.SellTab:CloseValidation()
     valItem = nil
+    previewPending = nil
+    previewElapsed = 0
+    previewFrame:Hide()
     if validationPanel then validationPanel:Hide() end
     if listScroll then listScroll:Show() end
     if scanBtn then scanBtn:Show() end

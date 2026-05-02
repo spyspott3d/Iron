@@ -7,6 +7,56 @@ local Recipes = IR.Recipes
 
 local SCAN_DEBOUNCE = 0.5
 
+-- Map any localized profession name to its canonical English name so the
+-- recipe DB stays single-keyed even when the user switches client locale.
+local PROFESSION_CANONICAL = {
+    -- enUS (identity)
+    ["Alchemy"] = "Alchemy", ["Blacksmithing"] = "Blacksmithing",
+    ["Cooking"] = "Cooking", ["Enchanting"] = "Enchanting",
+    ["Engineering"] = "Engineering", ["First Aid"] = "First Aid",
+    ["Fishing"] = "Fishing", ["Herbalism"] = "Herbalism",
+    ["Inscription"] = "Inscription", ["Jewelcrafting"] = "Jewelcrafting",
+    ["Leatherworking"] = "Leatherworking", ["Mining"] = "Mining",
+    ["Skinning"] = "Skinning", ["Tailoring"] = "Tailoring",
+    ["Smelting"] = "Smelting", ["Lockpicking"] = "Lockpicking",
+    ["Poisons"] = "Poisons", ["Runeforging"] = "Runeforging",
+    -- frFR
+    ["Alchimie"] = "Alchemy", ["Forge"] = "Blacksmithing",
+    ["Cuisine"] = "Cooking", ["Enchantement"] = "Enchanting",
+    ["Ingénierie"] = "Engineering", ["Secourisme"] = "First Aid",
+    ["Pêche"] = "Fishing", ["Herboristerie"] = "Herbalism",
+    ["Calligraphie"] = "Inscription", ["Joaillerie"] = "Jewelcrafting",
+    ["Travail du cuir"] = "Leatherworking", ["Minage"] = "Mining",
+    ["Dépeçage"] = "Skinning", ["Couture"] = "Tailoring",
+    ["Fonte"] = "Smelting", ["Crochetage"] = "Lockpicking",
+    ["Inscription en runes"] = "Runeforging",
+}
+
+local function canonicalProfession(name)
+    if not name then return nil end
+    return PROFESSION_CANONICAL[name] or name
+end
+
+local PROFESSION_DISPLAY = {
+    frFR = {
+        Alchemy = "Alchimie", Blacksmithing = "Forge",
+        Cooking = "Cuisine", Enchanting = "Enchantement",
+        Engineering = "Ingénierie", ["First Aid"] = "Secourisme",
+        Fishing = "Pêche", Herbalism = "Herboristerie",
+        Inscription = "Calligraphie", Jewelcrafting = "Joaillerie",
+        Leatherworking = "Travail du cuir", Mining = "Minage",
+        Skinning = "Dépeçage", Tailoring = "Couture",
+        Smelting = "Fonte", Lockpicking = "Crochetage",
+        Runeforging = "Inscription en runes",
+    },
+}
+
+function Recipes:GetLocalizedName(canonicalName)
+    if not canonicalName then return canonicalName end
+    local map = PROFESSION_DISPLAY[IR.locale or ""]
+    return (map and map[canonicalName]) or canonicalName
+end
+
 local function db()
     return Iron_DB
 end
@@ -34,7 +84,7 @@ local function currentProfession()
     if not GetTradeSkillLine then return nil end
     local p = GetTradeSkillLine()
     if not p or p == "UNKNOWN" or p == "" then return nil end
-    return p
+    return canonicalProfession(p)
 end
 
 local function scheduleScan()
@@ -67,8 +117,9 @@ end
 function Recipes:Snapshot()
     if Recipes.scanning then return end
     if not GetTradeSkillLine or not GetNumTradeSkills then return end
-    local profession = GetTradeSkillLine()
-    if not profession or profession == "UNKNOWN" or profession == "" then return end
+    local rawProfession = GetTradeSkillLine()
+    if not rawProfession or rawProfession == "UNKNOWN" or rawProfession == "" then return end
+    local profession = canonicalProfession(rawProfession)
 
     Recipes.scanning = true
     expandAllHeaders()
@@ -153,10 +204,54 @@ function Recipes:Snapshot()
     Recipes.scanning = false
 end
 
+-- One-shot migration that folds locale-variant entries (e.g. "Couture") into
+-- their canonical English key (e.g. "Tailoring"). Run once per session at
+-- load. On per-craft conflict, keep the entry from the more recent scan.
+function Recipes:MigrateLocaleDuplicates()
+    local d = db()
+    if not d or type(d.recipes) ~= "table" then return end
+
+    local nonCanonical = {}
+    for prof in pairs(d.recipes) do
+        local canon = canonicalProfession(prof)
+        if canon ~= prof then
+            table.insert(nonCanonical, { from = prof, to = canon })
+        end
+    end
+    if #nonCanonical == 0 then return end
+
+    local mergedFrom, mergedInto = 0, 0
+    for _, m in ipairs(nonCanonical) do
+        local src = d.recipes[m.from]
+        local dst = d.recipes[m.to]
+        if src and not dst then
+            d.recipes[m.to] = src
+            mergedInto = mergedInto + 1
+        elseif src and dst then
+            local srcWins = (src.scannedAt or 0) > (dst.scannedAt or 0)
+            dst.crafts = dst.crafts or {}
+            for key, craft in pairs(src.crafts or {}) do
+                if dst.crafts[key] == nil or srcWins then
+                    dst.crafts[key] = craft
+                end
+            end
+            if srcWins then
+                dst.scannedAt = src.scannedAt
+                dst.learnedBy = src.learnedBy
+            end
+            mergedFrom = mergedFrom + 1
+        end
+        d.recipes[m.from] = nil
+    end
+
+    IR:Debug(string.format("Recipes: migrated %d locale-variant profession(s), merged %d, renamed %d",
+        #nonCanonical, mergedFrom, mergedInto))
+end
+
 function Recipes:Get(profession)
     local d = db()
     if not d or not d.recipes then return nil end
-    return d.recipes[profession]
+    return d.recipes[canonicalProfession(profession)]
 end
 
 function Recipes:GetAllProfessions()
@@ -174,4 +269,6 @@ IR:On("TRADE_SKILL_CLOSE", function()
     cancelScheduledScan()
     lastSnapshotProfession = nil
 end)
+
+IR:On("PLAYER_LOGIN", function() Recipes:MigrateLocaleDuplicates() end)
 
