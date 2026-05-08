@@ -92,7 +92,7 @@ read_globals = {
     "GetSpellInfo", "GetSpellLink", "GetSpellBookItemInfo",
 
     -- Player and units
-    "UnitName",
+    "UnitName", "GetRealmName",
 
     -- Money
     "GetMoney", "GetCoinTextureString", "MoneyFrame_Update",

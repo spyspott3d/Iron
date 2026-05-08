@@ -5,10 +5,6 @@ local addonName, IR = ...
 IR.IronVault = {}
 local IronVault = IR.IronVault
 
-local function settings()
-    return Iron_DB and Iron_DB.settings and Iron_DB.settings.ironVault
-end
-
 local function vaultData()
     -- Per-character bucket holding groups + nextGroupID. Other ironVault
     -- preferences (autoOpenOnBankShow, showSurplusWarning) stay account-wide
