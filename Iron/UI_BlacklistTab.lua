@@ -66,10 +66,10 @@ refresh = function()
     if not content then return end
     for _, r in pairs(rows) do r:Hide() end
 
-    local s = Iron_DB and Iron_DB.settings and Iron_DB.settings.ironSell
+    local bl = IronSell:GetBlacklistTable()
     local ids = {}
-    if s and s.blacklist then
-        for itemID in pairs(s.blacklist) do
+    if bl then
+        for itemID in pairs(bl) do
             if searchFilter == "" then
                 table.insert(ids, itemID)
             else

@@ -9,33 +9,45 @@ local function settings()
     return Iron_DB and Iron_DB.settings and Iron_DB.settings.ironVault
 end
 
+local function vaultData()
+    -- Per-character bucket holding groups + nextGroupID. Other ironVault
+    -- preferences (autoOpenOnBankShow, showSurplusWarning) stay account-wide
+    -- in settings().
+    local c = IR and IR.CharDB and IR:CharDB()
+    return c and c.vault or nil
+end
+
+function IronVault:GetGroupsTable()
+    local v = vaultData()
+    return (v and v.groups) or {}
+end
+
 function IronVault:GetGroups()
-    local s = settings()
-    return (s and s.groups) or {}
+    return self:GetGroupsTable()
 end
 
 function IronVault:GetGroup(id)
-    local s = settings()
-    if not s or not id then return nil end
-    return s.groups[id]
+    local v = vaultData()
+    if not v or not id then return nil end
+    return v.groups[id]
 end
 
 function IronVault:CreateGroup(name, direction)
-    local s = settings()
-    if not s then return nil end
+    local v = vaultData()
+    if not v then return nil end
     name = name and name:match("^%s*(.-)%s*$") or ""
     if name == "" then name = IR.L["New Group"] end
     if direction ~= "withdraw" then direction = "deposit" end
-    local id = s.nextGroupID or 1
-    s.nextGroupID = id + 1
-    s.groups[id] = { id = id, name = name, items = {}, direction = direction }
+    local id = v.nextGroupID or 1
+    v.nextGroupID = id + 1
+    v.groups[id] = { id = id, name = name, items = {}, direction = direction }
     return id
 end
 
 function IronVault:DeleteGroup(id)
-    local s = settings()
-    if not s or not id then return end
-    s.groups[id] = nil
+    local v = vaultData()
+    if not v or not id then return end
+    v.groups[id] = nil
 end
 
 function IronVault:RenameGroup(id, name)
@@ -477,15 +489,15 @@ function IronVault:AbortRestock()
 end
 
 function IronVault:RestockAll(onComplete)
-    local s = settings()
-    if not s or not s.groups then
+    local v = vaultData()
+    if not v or not v.groups then
         if onComplete then onComplete() end
         return
     end
     -- Run deposits first (free bag space), then withdraws (use newly freed bag
     -- space to refill from bank). Within a direction, order by id ascending.
     local deposits, withdraws = {}, {}
-    for id, g in pairs(s.groups) do
+    for id, g in pairs(v.groups) do
         if g.direction == "withdraw" then
             table.insert(withdraws, id)
         else
@@ -526,10 +538,10 @@ function IronVault:RestockAll(onComplete)
 end
 
 local function runAutoStoreGroups()
-    local s = settings()
-    if not s or not s.groups then return end
+    local v = vaultData()
+    if not v or not v.groups then return end
     local queue = {}
-    for id, g in pairs(s.groups) do
+    for id, g in pairs(v.groups) do
         if g.autoStore then
             table.insert(queue, id)
         end
@@ -596,16 +608,16 @@ function IronVault:ParseItemsFromText(text)
 end
 
 local function sortedGroupIDs()
-    local s = settings()
+    local v = vaultData()
     local list = {}
-    if s then
-        for id in pairs(s.groups) do
+    if v then
+        for id in pairs(v.groups) do
             table.insert(list, id)
         end
         -- Same order as RestockAll: deposits first, withdraws after, alpha within each.
         table.sort(list, function(a, b)
-            local ga = s.groups[a]
-            local gb = s.groups[b]
+            local ga = v.groups[a]
+            local gb = v.groups[b]
             local da = (ga and ga.direction) == "withdraw" and 1 or 0
             local db = (gb and gb.direction) == "withdraw" and 1 or 0
             if da ~= db then return da < db end
@@ -919,8 +931,8 @@ local function buildVaultAITab(parent)
                 groupRows[i] = row
             end
             row.groupID = id
-            local s = settings()
-            local g = s and s.groups[id]
+            local v = vaultData()
+            local g = v and v.groups[id]
             local count = 0
             if g and g.items then
                 for _ in pairs(g.items) do count = count + 1 end

@@ -225,12 +225,72 @@ local function migrateRenamedSettings()
     end
 end
 
+-- Move shared recipes / blacklist / vault groups out of the account-wide
+-- bucket and into a one-shot legacy archive. The user explicitly imports it
+-- onto the right character via /iron import (see cmdImport).
+local function migrateToPerChar()
+    if Iron_DB.perCharMigrated then return end
+    Iron_DB.perCharMigrated = true
+
+    local s = Iron_DB.settings or {}
+    local sellS = s.ironSell or {}
+    local vaultS = s.ironVault or {}
+
+    local hasRecipes = type(Iron_DB.recipes) == "table" and next(Iron_DB.recipes) ~= nil
+    local hasBlacklist = type(sellS.blacklist) == "table" and next(sellS.blacklist) ~= nil
+    local hasGroups = type(vaultS.groups) == "table" and next(vaultS.groups) ~= nil
+
+    if hasRecipes or hasBlacklist or hasGroups then
+        Iron_DB.legacy = {
+            recipes = Iron_DB.recipes or {},
+            blacklist = sellS.blacklist or {},
+            groups = vaultS.groups or {},
+            nextGroupID = vaultS.nextGroupID or 1,
+        }
+        Iron_DB.legacyAvailable = true
+    end
+
+    Iron_DB.recipes = {}
+    if s.ironSell then s.ironSell.blacklist = {} end
+    if s.ironVault then
+        s.ironVault.groups = {}
+        s.ironVault.nextGroupID = 1
+    end
+end
+
 local function ensureDB()
     if type(Iron_DB) ~= "table" then
         Iron_DB = {}
     end
     migrateRenamedSettings()
     deepFill(Iron_DB, defaultDB())
+    migrateToPerChar()
+    Iron_DB.chars = Iron_DB.chars or {}
+end
+
+function IR:CharKey()
+    local realm = (GetRealmName and GetRealmName()) or "unknown"
+    local name = UnitName and UnitName("player") or nil
+    if not name or name == "" or name == "Unknown" then return nil end
+    return realm .. "-" .. name
+end
+
+function IR:CharDB()
+    if type(Iron_DB) ~= "table" then return nil end
+    local key = self:CharKey()
+    if not key then return nil end
+    Iron_DB.chars = Iron_DB.chars or {}
+    local bucket = Iron_DB.chars[key]
+    if not bucket then
+        bucket = { recipes = {}, blacklist = {}, vault = { groups = {}, nextGroupID = 1 } }
+        Iron_DB.chars[key] = bucket
+    end
+    bucket.recipes = bucket.recipes or {}
+    bucket.blacklist = bucket.blacklist or {}
+    bucket.vault = bucket.vault or { groups = {}, nextGroupID = 1 }
+    bucket.vault.groups = bucket.vault.groups or {}
+    bucket.vault.nextGroupID = bucket.vault.nextGroupID or 1
+    return bucket
 end
 
 IR.slashHandlers = {}
@@ -351,8 +411,80 @@ local function cmdAbout()
     DEFAULT_CHAT_FRAME:AddMessage("  /iron debug   " .. IR.L["toggle debug mode, on|off"])
 end
 
+local function cmdImport(rest)
+    rest = (rest or ""):lower():match("^%s*(.-)%s*$") or ""
+    if not Iron_DB.legacyAvailable or type(Iron_DB.legacy) ~= "table" then
+        IR:Print(IR.L["No legacy archive to import."])
+        return
+    end
+    if rest == "discard" then
+        Iron_DB.legacy = nil
+        Iron_DB.legacyAvailable = false
+        IR:Print(IR.L["Legacy archive discarded."])
+        return
+    end
+
+    local char = IR:CharDB()
+    if not char then
+        IR:Print(IR.L["Unable to resolve current character; try again after login."])
+        return
+    end
+    local legacy = Iron_DB.legacy
+
+    local recipeCount = 0
+    for prof, entry in pairs(legacy.recipes or {}) do
+        if char.recipes[prof] == nil then
+            char.recipes[prof] = entry
+            recipeCount = recipeCount + 1
+        end
+    end
+
+    local blCount = 0
+    for itemID in pairs(legacy.blacklist or {}) do
+        if not char.blacklist[itemID] then
+            char.blacklist[itemID] = true
+            blCount = blCount + 1
+        end
+    end
+
+    local groupCount = 0
+    local nextID = char.vault.nextGroupID or 1
+    for existingID in pairs(char.vault.groups) do
+        if (existingID + 1) > nextID then nextID = existingID + 1 end
+    end
+    for id, g in pairs(legacy.groups or {}) do
+        local targetID = id
+        if char.vault.groups[targetID] then
+            targetID = nextID
+            nextID = nextID + 1
+            g.id = targetID
+        elseif (targetID + 1) > nextID then
+            nextID = targetID + 1
+        end
+        char.vault.groups[targetID] = g
+        groupCount = groupCount + 1
+    end
+    char.vault.nextGroupID = math.max(nextID, legacy.nextGroupID or 1)
+
+    Iron_DB.legacy = nil
+    Iron_DB.legacyAvailable = false
+
+    IR:Print(string.format(IR.L["Imported: %d professions, %d blacklist entries, %d groups."],
+        recipeCount, blCount, groupCount))
+    if IR.Settings and IR.Settings.Refresh then
+        IR.Settings.Refresh()
+    end
+end
+
+IR:On("PLAYER_LOGIN", function()
+    if Iron_DB and Iron_DB.legacyAvailable then
+        IR:Print(IR.L["Iron data is now per-character. Use /iron import to copy the previous shared data to this character, or /iron import discard to discard it."])
+    end
+end)
+
 IR:RegisterSlashCommand("help", cmdHelp, "show this help")
 IR:RegisterSlashCommand("stats", cmdStats, "show load statistics")
 IR:RegisterSlashCommand("debug", cmdDebug, "toggle debug mode, on|off")
 IR:RegisterSlashCommand("logs", function() IR:OpenLogs() end, "open log viewer (copyable)")
 IR:RegisterSlashCommand("about", cmdAbout, "show addon version and overview")
+IR:RegisterSlashCommand("import", cmdImport, "import legacy shared data to this character (or 'discard' to drop)")

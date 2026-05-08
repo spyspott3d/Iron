@@ -301,6 +301,12 @@ if IR.locale == "frFR" then
     L["missing in bags"] = "manquant en sac"
     L["bank full"] = "banque pleine"
     L["bags full"] = "sacs pleins"
+    L["No legacy archive to import."] = "Aucune archive partagée à importer."
+    L["Legacy archive discarded."] = "Archive partagée supprimée."
+    L["Unable to resolve current character; try again after login."] = "Impossible de résoudre le perso courant, réessayer après connexion."
+    L["Imported: %d professions, %d blacklist entries, %d groups."] = "Importé : %d métiers, %d entrées blacklist, %d groupes."
+    L["Iron data is now per-character. Use /iron import to copy the previous shared data to this character, or /iron import discard to discard it."] = "Les données Iron sont désormais par perso. Utiliser /iron import pour copier les anciennes données partagées vers ce perso, ou /iron import discard pour les jeter."
+    L["import legacy shared data to this character (or 'discard' to drop)"] = "importer les données partagées vers ce perso (ou 'discard' pour les jeter)"
 elseif IR.locale == "deDE" then
     local L = IR.L
     L["Commands:"] = "Befehle:"

@@ -16,10 +16,6 @@ local frame, content, statusText
 local groupRows = {}
 local restockAllBtn
 
-local function settingsVault()
-    return Iron_DB and Iron_DB.settings and Iron_DB.settings.ironVault
-end
-
 local function findBankAnchor()
     if IsAddOnLoaded and IsAddOnLoaded("Bagnon") then
         local candidates = { "BagnonFrameBank", "BagnonFramebank", "BagnonBank", "BagnonInventoryBank" }
@@ -34,17 +30,17 @@ local function findBankAnchor()
 end
 
 local function sortedGroupIDs()
-    local s = settingsVault()
+    local groups = IronVault:GetGroupsTable()
     local list = {}
-    if s and s.groups then
-        for id in pairs(s.groups) do
+    if groups then
+        for id in pairs(groups) do
             table.insert(list, id)
         end
         -- Same order as RestockAll execution: deposits first, withdraws after,
         -- alphabetical within each direction.
         table.sort(list, function(a, b)
-            local ga = s.groups[a]
-            local gb = s.groups[b]
+            local ga = groups[a]
+            local gb = groups[b]
             local da = (ga and ga.direction) == "withdraw" and 1 or 0
             local db = (gb and gb.direction) == "withdraw" and 1 or 0
             if da ~= db then return da < db end
@@ -104,8 +100,7 @@ local function refresh()
     local totalY = 0
     for i, id in ipairs(ids) do
         local row = getGroupRow(i)
-        local s = settingsVault()
-        local g = s and s.groups[id]
+        local g = IronVault:GetGroup(id)
         if g then
             local at, total = IronVault:GetGroupStatus(id)
             local autoTag = g.autoStore and " |cff66ff66[auto]|r" or ""

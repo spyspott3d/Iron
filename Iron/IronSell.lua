@@ -13,6 +13,15 @@ local function settings()
     return Iron_DB and Iron_DB.settings and Iron_DB.settings.ironSell
 end
 
+local function blacklistTable()
+    local c = IR and IR.CharDB and IR:CharDB()
+    return c and c.blacklist or nil
+end
+
+function IronSell:GetBlacklistTable()
+    return blacklistTable() or {}
+end
+
 local sbScanner
 local function getScanner()
     if not sbScanner then
@@ -45,25 +54,24 @@ local function tooltipReason(bag, slot)
 end
 
 function IronSell:IsBlacklisted(itemID)
-    local s = settings()
-    return s and s.blacklist and s.blacklist[itemID] == true or false
+    local bl = blacklistTable()
+    return bl and bl[itemID] == true or false
 end
 
 function IronSell:AddToBlacklist(itemID)
-    local s = settings()
-    if not s then return false end
+    local bl = blacklistTable()
+    if not bl then return false end
     itemID = tonumber(itemID)
     if not itemID or itemID < 1 then return false end
-    s.blacklist = s.blacklist or {}
-    local existed = s.blacklist[itemID] == true
-    s.blacklist[itemID] = true
+    local existed = bl[itemID] == true
+    bl[itemID] = true
     return true, existed
 end
 
 function IronSell:RemoveFromBlacklist(itemID)
-    local s = settings()
-    if not s or not s.blacklist then return end
-    s.blacklist[tonumber(itemID)] = nil
+    local bl = blacklistTable()
+    if not bl then return end
+    bl[tonumber(itemID)] = nil
 end
 
 function IronSell:ParseItemFromText(text)
@@ -127,7 +135,8 @@ function IronSell:EnumerateSellable()
                     if not items[itemID] then
                         local name, itemLink, quality, _, _, _, _, _, _, _, vendor = GetItemInfo(itemID)
                         local reason
-                        if s.blacklist and s.blacklist[itemID] then
+                        local bl = blacklistTable()
+                        if bl and bl[itemID] then
                             reason = "blacklisted"
                         elseif quality == 0 and not s.includeGrey then
                             reason = "junk"
@@ -693,8 +702,9 @@ local function buildSellAITab(parent)
         end
 
         local ids = {}
-        if s and s.blacklist then
-            for itemID in pairs(s.blacklist) do table.insert(ids, itemID) end
+        local bl = blacklistTable()
+        if bl then
+            for itemID in pairs(bl) do table.insert(ids, itemID) end
             table.sort(ids, function(a, b)
                 local na = GetItemInfo(a) or ""
                 local nb = GetItemInfo(b) or ""

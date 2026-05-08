@@ -58,7 +58,9 @@ function Recipes:GetLocalizedName(canonicalName)
 end
 
 local function db()
-    return Iron_DB
+    -- Returns the per-character bucket so recipes are stored per character.
+    -- Shape stays compatible: callers read/write d.recipes[profession].
+    return IR and IR.CharDB and IR:CharDB() or nil
 end
 
 local scanTimer = CreateFrame("Frame")
